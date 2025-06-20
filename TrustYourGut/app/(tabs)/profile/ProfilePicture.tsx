@@ -1,13 +1,14 @@
 import { Text, View, StyleSheet } from 'react-native';
 import { Link } from 'expo-router';
 import ImageViewer from '@/components/ImageViewer';
-import Button from '@/components/Button';
+import ProfilePictureButton from '@/components/ProfilePictureButton';
 import * as ImagePicker from 'expo-image-picker';
 import {useState} from 'react';
+import { Stack } from 'expo-router';
 
-const PlaceholderImage = require('../../assets/images/profile.jpg'); 
+const PlaceholderImage = require('@/assets/images/profile.jpg'); 
 
-export default function ProfileScreen() {
+export default function ProfilePictureScreen() {
 
   const [selectedImage, setSelectedImage] = useState<string | undefined>(undefined);
 
@@ -31,13 +32,14 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Profile Screen</Text>
+      <Stack.Screen options={{ title: 'Change Profile Picture'}} />
+      <Text style={styles.text}>Profile Picture Screen</Text>
       <View style={styles.imageContainer}>
         <ImageViewer imgSource={PlaceholderImage} selectedImage={selectedImage}/>
       </View>
       <View style = {styles.footerContainer}>
-        <Button theme="primary" label= "Choose a photo" onPress={pickImageAsync} />
-        <Button label = "Reset Photo" onPress={resetPhoto} />
+        <ProfilePictureButton theme="primary" label= "Choose a photo" onPress={pickImageAsync} />
+        <ProfilePictureButton label = "Reset Photo" onPress={resetPhoto} />
       </View>
     </View>
   );

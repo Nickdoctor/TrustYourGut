@@ -7,7 +7,7 @@ type Props = {
   onPress?: () => void;
 };
 
-export default function Button({ label, theme, onPress }: Props) {
+export default function ProfilePictureButton({ label, theme, onPress }: Props) {
   if (theme === 'primary') {
   return (
       <View

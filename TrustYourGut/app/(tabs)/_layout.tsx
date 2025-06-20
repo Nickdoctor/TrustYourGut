@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-
+import {Stack} from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -42,7 +42,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'profile',
+          headerShown: false,
           tabBarIcon: ({ color }) => (
             <AntDesign name='user' color={color} size={24} />
           ),
