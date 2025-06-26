@@ -23,9 +23,9 @@ export default function TabLayout() {
     >
 
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
-          title: 'Home',
+          title: 'home',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'home-sharp' : 'home-outline'} color={color} size={24} />
           ),
@@ -42,7 +42,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'profile',
+          title: 'Profile',
           headerShown: false,
           tabBarIcon: ({ color }) => (
             <AntDesign name='user' color={color} size={24} />

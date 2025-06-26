@@ -8,6 +8,7 @@ import Button from '@/components/Button';
 import { Stack } from 'expo-router';
 import { setShouldAnimateExitingForTag } from 'react-native-reanimated/lib/typescript/core';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { supabase } from '@/lib/supabase';
 
 
 export default function ProfileScreen() {
@@ -22,6 +23,14 @@ export default function ProfileScreen() {
   const handleSubmit = () => {
     console.log('Name submitted:', firstName, lastName, email, phoneNumber);
   }
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error logging out:', error);
+    } else {
+      router.replace('/auth/Register');
+    }
+  };
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.container}>
@@ -53,6 +62,7 @@ export default function ProfileScreen() {
 
           <Button theme='picture' label='Change Profile Picture' onPress={() => router.navigate('/profile/ProfilePicture')} />
           <Button theme='primary' label='Save Changes' onPress={handleSubmit} />
+          <Button theme='primary' label='Log Out' onPress={handleLogout} />
         </View>
       </View>
     </TouchableWithoutFeedback>
