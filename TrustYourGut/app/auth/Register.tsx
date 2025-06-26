@@ -51,7 +51,7 @@ export default function RegisterScreen() {
       return;
     }
 
-    Alert.alert('Check your email to confirm your account');
+    Alert.alert('Success', 'Account created successfully!');
     router.replace('/auth/LogIn');
     setLoading(false);
   };

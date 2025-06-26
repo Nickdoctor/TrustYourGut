@@ -6,8 +6,8 @@ import Constants from 'expo-constants'
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-console.log('SUPABASE URL:', supabaseUrl);
-console.log('SUPABASE ANON KEY:', supabaseAnonKey);
+//console.log('SUPABASE URL:', supabaseUrl);
+//console.log('SUPABASE ANON KEY:', supabaseAnonKey);
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase URL and Anon Key must be set in environment variables');
 }
