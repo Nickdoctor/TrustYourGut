@@ -1,28 +1,154 @@
-import { Text, View, StyleSheet, TextInput, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import {
+  Text,
+  View,
+  StyleSheet,
+  TextInput,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ScrollView,
+  RefreshControl,
+} from 'react-native';
 import { Link } from 'expo-router';
 import ImageViewer from '@/components/ImageViewer';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import Button from '@/components/Button';
 import { Stack } from 'expo-router';
-import { setShouldAnimateExitingForTag } from 'react-native-reanimated/lib/typescript/core';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { supabase } from '@/lib/supabase';
-
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function ProfileScreen() {
   const PlaceholderImage = require('@/assets/images/profile.jpg');
-  const [selectedImage, setSelectedImage] = useState<string | undefined>(undefined);
+  //const [selectedImage, setSelectedImage] = useState<string | undefined>(undefined);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [refreshing, setRefreshing] = useState(false); // For pull-to-refresh
+
   const router = useRouter();
 
-  const handleSubmit = () => {
-    console.log('Name submitted:', firstName, lastName, email, phoneNumber);
-  }
+  // Fetch profile picture URL on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      const fetchProfileImageUrl = async () => {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError || !session) {
+          console.log('Not logged in or error fetching session');
+          return;
+        }
+
+        const userId = session.user.id;
+
+        const { data, error } = await supabase
+          .from('accounts')
+          .select('profile_picture_url')
+          .eq('id', userId)
+          .single();
+
+        if (error) {
+          console.log('No profile image URL found');
+        } else if (data?.profile_picture_url) {
+          setProfileImageUrl(`${data.profile_picture_url}?t=${Date.now()}`);
+          console.log('Profile image URL:', data.profile_picture_url);
+        }
+      };
+
+      fetchProfileImageUrl();
+    }, [])
+  );
+
+  // Fetch user data function, reused for initial load and refresh
+  const fetchUserData = async () => {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      console.error('Session error:', sessionError);
+      return;
+    }
+
+    const userId = session.user.id;
+
+    const { data, error } = await supabase
+      .from('accounts')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user data:', error.message);
+    } else {
+      setFirstName(data.first_name);
+      setLastName(data.last_name);
+      setEmail(data.email);
+      setPhoneNumber(data.phone_number + ''); // ensure string
+      console.log('Fetched user data:', data);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  // Pull-to-refresh handler
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchUserData();
+    setRefreshing(false);
+  };
+
+  const handleSubmit = async () => {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      console.error('Session error:', sessionError);
+      return;
+    }
+
+    const userId = session.user.id;
+    const { error: authError } = await supabase.auth.updateUser({ email });
+
+    if (authError) {
+      console.error('Error updating auth email:', authError.message);
+      alert('Failed to update email: ' + authError.message);
+      return; // stop here if email update fails
+    }
+
+    const { data, error } = await supabase
+      .from('accounts')
+      .update({
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        phone_number: phoneNumber,
+      })
+      .eq('id', userId)
+      .select('first_name, last_name, email, phone_number')
+      .single();
+
+    if (error) {
+      console.error('Error updating profile:', error.message);
+      alert('Error updating profile: ' + error.message);
+    } else {
+      console.log('User data updated:', data);
+      alert('Profile updated successfully!');
+    }
+  };
+
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -31,40 +157,78 @@ export default function ProfileScreen() {
       router.replace('/auth/Register');
     }
   };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.cardContainer}>
           <View style={styles.imageContainer}>
-            <ImageViewer imgSource={PlaceholderImage} selectedImage={selectedImage} imageStyle={styles.profileImage} />
+            <ImageViewer
+              key={profileImageUrl?? PlaceholderImage}
+              imgSource={PlaceholderImage}
+              selectedImage={profileImageUrl}
+              imageStyle={styles.profileImage}
+            />
           </View>
           <Stack.Screen options={{ title: 'Profile' }} />
           <Text style={styles.text}>Profile Screen</Text>
           <View style={styles.row}>
             <View style={[styles.inputWithIconName, { marginLeft: 0 }]}>
               <FontAwesome name="user" size={20} color="#999" style={styles.icon} />
-              <TextInput placeholder='First Name' placeholderTextColor="#888" style={styles.nameInput} value={firstName} onChangeText={setFirstName} />
+              <TextInput
+                placeholder={'First Name'}
+                placeholderTextColor="#888"
+                style={styles.nameInput}
+                value={firstName}
+                onChangeText={setFirstName}
+              />
             </View>
             <View style={[styles.inputWithIconName, { marginRight: 0 }]}>
               <FontAwesome name="user" size={20} color="#999" style={styles.icon} />
-              <TextInput placeholder='Last Name' placeholderTextColor="#888" style={styles.nameInput} value={lastName} onChangeText={setLastName} />
+              <TextInput
+                placeholder="Last Name"
+                placeholderTextColor="#888"
+                style={styles.nameInput}
+                value={lastName}
+                onChangeText={setLastName}
+              />
             </View>
           </View>
           <View style={styles.inputWithIcon}>
             <FontAwesome name="envelope" size={20} color="#999" style={styles.icon} />
-            <TextInput keyboardType='email-address' textContentType='emailAddress' placeholder='Enter your Email' placeholderTextColor="#888" style={styles.emailInput} value={email} onChangeText={setEmail} />
+            <TextInput
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              placeholder="Enter your Email"
+              placeholderTextColor="#888"
+              style={styles.emailInput}
+              value={email}
+              onChangeText={setEmail}
+            />
           </View>
 
           <View style={styles.inputWithIcon}>
             <FontAwesome name="phone" size={20} color="#999" style={styles.icon} />
-            <TextInput keyboardType='phone-pad' textContentType='telephoneNumber' placeholder='Enter your Phone Number' placeholderTextColor="#888" style={styles.phoneInput} value={phoneNumber} onChangeText={setPhoneNumber} />
+            <TextInput
+              keyboardType="phone-pad"
+              textContentType="telephoneNumber"
+              placeholder="Enter your Phone Number"
+              placeholderTextColor="#888"
+              style={styles.phoneInput}
+              value={phoneNumber + ''}
+              onChangeText={setPhoneNumber}
+            />
           </View>
 
-          <Button theme='picture' label='Change Profile Picture' onPress={() => router.navigate('/profile/ProfilePicture')} />
-          <Button theme='primary' label='Save Changes' onPress={handleSubmit} />
-          <Button theme='primary' label='Log Out' onPress={handleLogout} />
+          <Button theme="picture" label="Change Profile Picture" onPress={() => router.navigate('/profile/ProfilePicture')} />
+          <Button theme="primary" label="Save Changes" onPress={handleSubmit} />
+          <Button theme="primary" label="Log Out" onPress={handleLogout} />
         </View>
-      </View>
+      </ScrollView>
     </TouchableWithoutFeedback>
   );
 }
@@ -77,7 +241,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   container: {
-    flex: 1,
+    flexGrow: 1, // <-- important for ScrollView contentContainerStyle
     backgroundColor: '#25292e',
     alignItems: 'center',
     justifyContent: 'center',
@@ -92,7 +256,6 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    // Optional: border for extra pop
     borderWidth: 1,
     borderColor: '#ffd33d',
   },
@@ -109,10 +272,9 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     backgroundColor: '#eee',
-    overflow: 'hidden', // This ensures circular clipping
-    alignSelf: 'center', // Center the image in the card
-    marginBottom: 20, // Optional spacing below image
-
+    overflow: 'hidden',
+    alignSelf: 'center',
+    marginBottom: 20,
   },
   footerContainer: {
     flex: 1 / 3,
@@ -155,7 +317,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     color: '#000',
-    //width: '45%',
   },
   emailInput: {
     flex: 1,

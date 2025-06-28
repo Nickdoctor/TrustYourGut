@@ -1,12 +1,12 @@
 import { Text, View, StyleSheet } from 'react-native';
-import { Link } from 'expo-router';
+import { Stack } from 'expo-router';
+import { useState, useEffect } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { supabase } from '@/lib/supabase';
+import { decode } from 'base64-arraybuffer';
+
 import ImageViewer from '@/components/ImageViewer';
 import ProfilePictureButton from '@/components/ProfilePictureButton';
-import * as ImagePicker from 'expo-image-picker';
-import { useState, useEffect } from 'react';
-import { Stack } from 'expo-router';
-import { supabase } from '@/lib/supabase'; // adjust path as needed
-import { decode } from 'base64-arraybuffer'; // needed for blob upload
 
 const PlaceholderImage = require('@/assets/images/profile.jpg');
 
@@ -38,7 +38,8 @@ export default function ProfilePictureScreen() {
       if (error) {
         console.log('No profile image URL found');
       } else if (data?.profile_picture_url) {
-        setProfileImageUrl(data.profile_picture_url);
+        // Add cache-busting query param
+        setProfileImageUrl(`${data.profile_picture_url}?t=${Date.now()}`);
       }
     };
 
@@ -57,7 +58,6 @@ export default function ProfilePictureScreen() {
       const image = result.assets[0];
       setSelectedImage(image.uri);
 
-      // Get user ID
       const {
         data: { session },
         error: sessionError,
@@ -69,11 +69,8 @@ export default function ProfilePictureScreen() {
       }
 
       const userId = session.user.id;
-      const fileExt = image.uri.split('.').pop() ?? 'jpg';
-      const fileName = `${userId}.${fileExt}`;
+      const fileExt = image.uri.split('.').pop();
       const filePath = `${userId}.jpg`;
-
-      // Convert base64 string to ArrayBuffer
       const fileBuffer = decode(image.base64 ?? '');
 
       const { error: uploadError } = await supabase.storage
@@ -87,7 +84,6 @@ export default function ProfilePictureScreen() {
         console.error(uploadError);
         alert('Upload failed.');
       } else {
-        // Get public URL of uploaded image
         const { data: publicUrlData } = supabase.storage
           .from('avatars')
           .getPublicUrl(filePath);
@@ -97,7 +93,7 @@ export default function ProfilePictureScreen() {
           return;
         }
 
-        // Update user's profile_picture_url in accounts table
+        // Save clean URL to database
         const { error: updateError } = await supabase
           .from('accounts')
           .update({ profile_picture_url: publicUrlData.publicUrl })
@@ -106,8 +102,10 @@ export default function ProfilePictureScreen() {
         if (updateError) {
           console.error('Failed to update profile image url:', updateError);
         } else {
-          setProfileImageUrl(publicUrlData.publicUrl + `?cacheBust=${Date.now()}`);
-          setSelectedImage(undefined); // clear selectedImage because URL saved
+          // Add cache-busting query when displaying
+          const cacheBustedUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+          setProfileImageUrl(cacheBustedUrl);
+          setSelectedImage(undefined);
           alert('Image uploaded and profile updated!');
         }
       }
@@ -116,9 +114,36 @@ export default function ProfilePictureScreen() {
     }
   };
 
+  const resetProfileImageUrl = async () => {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      console.log('Not logged in or error fetching session');
+      return;
+    }
+
+    const userId = session.user.id;
+
+    const { error } = await supabase
+      .from('accounts')
+      .update({ profile_picture_url: null })
+      .eq('id', userId);
+
+    if (error) {
+      console.log('Error resetting profile image URL:', error);
+    } else {
+      setProfileImageUrl(undefined);
+      console.log('Profile image URL reset successfully');
+    }
+  };
+
   const resetPhoto = () => {
     setSelectedImage(undefined);
     setProfileImageUrl(undefined);
+    resetProfileImageUrl();
   };
 
   return (
@@ -148,11 +173,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   text: {
-    color: '#fff',
-  },
-  button: {
-    fontSize: 20,
-    textDecorationLine: 'underline',
     color: '#fff',
   },
   imageContainer: {
