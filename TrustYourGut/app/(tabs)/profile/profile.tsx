@@ -1,13 +1,4 @@
-import {
-  Text,
-  View,
-  StyleSheet,
-  TextInput,
-  TouchableWithoutFeedback,
-  Keyboard,
-  ScrollView,
-  RefreshControl,
-} from 'react-native';
+import { Text, View, StyleSheet, TextInput, TouchableWithoutFeedback, Keyboard, ScrollView, RefreshControl, Image as RNImage } from 'react-native';
 import { Link } from 'expo-router';
 import ImageViewer from '@/components/ImageViewer';
 import * as ImagePicker from 'expo-image-picker';
@@ -18,16 +9,18 @@ import { Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { supabase } from '@/lib/supabase';
 import { useFocusEffect } from '@react-navigation/native';
+import * as SecureStore from 'expo-secure-store';
 
 export default function ProfileScreen() {
   const PlaceholderImage = require('@/assets/images/profile.jpg');
-  //const [selectedImage, setSelectedImage] = useState<string | undefined>(undefined);
+  const placeholderUri = RNImage.resolveAssetSource(PlaceholderImage).uri;
+
   const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [refreshing, setRefreshing] = useState(false); // For pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
 
   const router = useRouter();
 
@@ -55,14 +48,19 @@ export default function ProfileScreen() {
 
         if (error) {
           console.log('No profile image URL found');
+          // Set to placeholder with cache busting
+          setProfileImageUrl(`${placeholderUri}?t=${Date.now()}`);
         } else if (data?.profile_picture_url) {
           setProfileImageUrl(`${data.profile_picture_url}?t=${Date.now()}`);
           console.log('Profile image URL:', data.profile_picture_url);
+        } else {
+          // No URL found, show placeholder
+          setProfileImageUrl(`${placeholderUri}?t=${Date.now()}`);
         }
       };
 
       fetchProfileImageUrl();
-    }, [])
+    }, [placeholderUri])
   );
 
   // Fetch user data function, reused for initial load and refresh
@@ -91,17 +89,15 @@ export default function ProfileScreen() {
       setFirstName(data.first_name);
       setLastName(data.last_name);
       setEmail(data.email);
-      setPhoneNumber(data.phone_number + ''); // ensure string
+      setPhoneNumber(data.phone_number + '');
       console.log('Fetched user data:', data);
     }
   };
 
-  // Initial load
   useEffect(() => {
     fetchUserData();
   }, []);
 
-  // Pull-to-refresh handler
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchUserData();
@@ -125,7 +121,7 @@ export default function ProfileScreen() {
     if (authError) {
       console.error('Error updating auth email:', authError.message);
       alert('Failed to update email: ' + authError.message);
-      return; // stop here if email update fails
+      return;
     }
 
     const { data, error } = await supabase
@@ -158,6 +154,17 @@ export default function ProfileScreen() {
     }
   };
 
+  const formatPhoneNumber = (value: string) => {
+    const cleaned = value.replace(/\D/g, '').slice(0, 10);
+    const match = cleaned.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
+    if (!match) return value;
+    const [, area, middle, last] = match;
+    if (area && !middle) return `(${area}`;
+    if (area && middle && !last) return `(${area}) ${middle}`;
+    if (area && middle && last) return `(${area}) ${middle}-${last}`;
+    return value;
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <ScrollView
@@ -168,7 +175,7 @@ export default function ProfileScreen() {
         <View style={styles.cardContainer}>
           <View style={styles.imageContainer}>
             <ImageViewer
-              key={profileImageUrl?? PlaceholderImage}
+              key={profileImageUrl} // Changing key forces remount and reload
               imgSource={PlaceholderImage}
               selectedImage={profileImageUrl}
               imageStyle={styles.profileImage}
@@ -220,7 +227,7 @@ export default function ProfileScreen() {
               placeholderTextColor="#888"
               style={styles.phoneInput}
               value={phoneNumber + ''}
-              onChangeText={setPhoneNumber}
+              onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text))}
             />
           </View>
 
@@ -241,7 +248,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   container: {
-    flexGrow: 1, // <-- important for ScrollView contentContainerStyle
+    flexGrow: 1,
     backgroundColor: '#25292e',
     alignItems: 'center',
     justifyContent: 'center',
@@ -251,7 +258,7 @@ const styles = StyleSheet.create({
   cardContainer: {
     flex: 1,
     width: '100%',
-    backgroundColor: '#fff', // Light background for contrast
+    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',

@@ -18,16 +18,20 @@ export default function HomeScreen() {
         error: sessionError,
       } = await supabase.auth.getSession();
 
-      if (sessionError || !session) {
+      if (sessionError) {
         console.error('Session error:', sessionError);
+        return;
+      }
+      if (!session) {
+        console.warn('No active session found');
         return;
       }
 
       const userId = session.user.id;
 
-      
+
       const { data, error } = await supabase
-        .from('accounts') 
+        .from('accounts')
         .select('first_name')
         .eq('id', userId)
         .single();

@@ -13,6 +13,20 @@ export default function RegisterScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
 
+
+  // Function to format phone number input
+  // Formats input as (123) 456-7890
+  const formatPhoneNumber = (value: string) => {
+    const cleaned = value.replace(/\D/g, '').slice(0, 10); // Remove non-digits and limit to 10
+    const match = cleaned.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
+    if (!match) return value;
+    const [, area, middle, last] = match;
+    if (area && !middle) return `(${area}`;
+    if (area && middle && !last) return `(${area}) ${middle}`;
+    if (area && middle && last) return `(${area}) ${middle}-${last}`;
+    return value;
+  };
+
   const handleRegister = async () => {
     setLoading(true);
 
@@ -20,7 +34,7 @@ export default function RegisterScreen() {
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-        });
+    });
 
     if (signUpError) {
       Alert.alert('Error', signUpError.message);
@@ -90,7 +104,7 @@ export default function RegisterScreen() {
         style={styles.input}
         placeholder="Phone Number"
         value={phoneNumber}
-        onChangeText={setPhoneNumber}
+        onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text))}
         keyboardType="phone-pad"
       />
       <Button

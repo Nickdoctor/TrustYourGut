@@ -132,12 +132,24 @@ export default function ProfilePictureScreen() {
       .update({ profile_picture_url: null })
       .eq('id', userId);
 
+
     if (error) {
       console.log('Error resetting profile image URL:', error);
     } else {
       setProfileImageUrl(undefined);
       console.log('Profile image URL reset successfully');
     }
+
+    const { data, error:storageError } = await supabase
+      .storage
+      .from('avatars')
+      .remove([userId + '.jpg'])
+
+    if (storageError) {
+      console.error('Error deleting image from storage:', error);
+    } else {
+      console.log('Image deleted from storage successfully');
+    } 
   };
 
   const resetPhoto = () => {
