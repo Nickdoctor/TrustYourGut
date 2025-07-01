@@ -107,8 +107,11 @@ export default function HomeScreen() {
           </Text>
           <Text style={styles.text}>{listOfWelcomeMessages[randomIndex]}</Text>
           <Text style={styles.text}>
-            You have logged {numOfLogEntries} {numOfLogEntries === 1 ? 'time' : 'times'}! Keep it going!
+            {numOfLogEntries === 0
+              ? 'Welcome, You have entries! To get started, head over to the food entry tab to log your first meal.'
+              : `You have logged ${numOfLogEntries} ${numOfLogEntries === 1 ? 'time' : 'times'}! Keep it going!`}
           </Text>
+
         </View>
       </ScrollView>
     </TouchableWithoutFeedback>

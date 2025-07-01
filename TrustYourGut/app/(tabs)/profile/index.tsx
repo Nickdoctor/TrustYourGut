@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    paddingTop: 50,
+    paddingTop: 20,
   },
   cardContainer: {
     flex: 1,

@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import {Stack} from 'expo-router';
+import { Stack } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -35,7 +35,8 @@ export default function TabLayout() {
         name="foodEntry"
         options={{
           title: 'Food Entry',
-          tabBarIcon: ({color}) => (
+          headerShown: false,
+          tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons name="food-apple-outline" size={24} color={color} />),
         }}
       />
