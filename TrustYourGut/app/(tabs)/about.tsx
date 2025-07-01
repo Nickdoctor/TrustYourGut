@@ -68,7 +68,7 @@ export default function AboutScreen() {
         With a background in software development and a keen interest in nutrition, the developer aims to create tools that empower users to take control of their well-being.
       </Text>
       <Text style={styles.text}>
-        If you have any questions, feedback, or suggestions, feel free to reach out via the contact form in the app.
+        If you have any questions, feedback, or suggestions, feel free to reach out from the links below.
         Your input is invaluable in making Trust Your Gut even better!
       </Text>
       <View style={styles.row}>
