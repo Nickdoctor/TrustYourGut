@@ -51,7 +51,7 @@ export default function individualFoodEntryScreen() {
                 text1: 'Entry saved!',
                 text2: 'You just logged a new food entry 🎉'
             });
-            router.push('/(tabs)/foodEntry');
+            router.back();
         }
     }
     const [selectedScale, setSelectedScale] = useState<number | null>(null);
@@ -69,7 +69,7 @@ export default function individualFoodEntryScreen() {
         }
     };
     useEffect(() => {
-        if (typeof foodNameParm === 'string') {
+        if (typeof foodNameParm === 'string' && foodNameParm !== foodName) {
             setFoodName(foodNameParm);
         }
     }, [foodNameParm]);
