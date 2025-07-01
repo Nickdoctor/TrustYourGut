@@ -6,7 +6,7 @@ import { Alert } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { useGlobalSearchParams } from 'expo-router';
 
 
 
@@ -23,7 +23,7 @@ export default function individualFoodEntryScreen() {
             return;
         }
         const userId = session.user.id;
-        if (!foodName) {
+        if (!selectedFoodName) {
             Alert.alert('Error', 'Please enter a food name.');
             return;
         }
@@ -36,7 +36,7 @@ export default function individualFoodEntryScreen() {
             .from('food_entries')
             .insert({
                 user_id: userId,
-                food_name: foodName,
+                food_name: selectedFoodName,
                 score: selectedScale?.toString(),
                 tag: selectedTags,
                 description: description
@@ -58,8 +58,8 @@ export default function individualFoodEntryScreen() {
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [description, setDescription] = useState<string>('');
     const tags = ['Bloated', 'Full', 'Hungry', 'Discomfort', 'Comfort', 'Gassy', 'Nausea'];
-    const [foodName, setFoodName] = useState('');
-    const { foodNameParm } = useLocalSearchParams<{ foodNameParm?: string }>();
+    const [selectedFoodName, setSelectedFoodName] = useState('');
+    const {foodName} = useGlobalSearchParams<{ foodName?: string }>();
 
     const toggleTag = (tag: string) => {
         if (selectedTags.includes(tag)) {
@@ -68,11 +68,14 @@ export default function individualFoodEntryScreen() {
             setSelectedTags([...selectedTags, tag]);
         }
     };
-    useEffect(() => {
-        if (typeof foodNameParm === 'string' && foodNameParm !== foodName) {
-            setFoodName(foodNameParm);
-        }
-    }, [foodNameParm]);
+    useEffect(
+        () => {
+            if(foodName) {
+                setSelectedFoodName(foodName);
+            }
+        },
+        [foodName]
+    )
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <ScrollView
@@ -84,7 +87,7 @@ export default function individualFoodEntryScreen() {
                     <Stack.Screen options={{ title: ' Individual Food Entry' }} />
                     <View style={styles.row}>
                         <Text style={styles.text}>Name of Food Item:</Text>
-                        <Text style={styles.text}>{foodName ? foodName : 'None'}</Text>
+                        <Text style={styles.text}>{selectedFoodName ? selectedFoodName : 'None'}</Text>
                     </View>
                     <Button theme="food" label="+ Add Food Button" onPress={() => router.navigate('/foodEntry/enterFood')} />
                     <Text style={styles.text}>Food Score:</Text>

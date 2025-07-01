@@ -1,11 +1,11 @@
 import { Text, View, StyleSheet, TouchableWithoutFeedback, Keyboard, ScrollView, RefreshControl, TextInput, ActivityIndicator, FlatList } from 'react-native';
-import { Link, router } from 'expo-router';
+import { Link, router, useRouter } from 'expo-router';
 import Button from '@/components/Button';
 import { supabase } from '@/lib/supabase';
 import { Alert } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer, useState,} from 'react';
 import { format, parseISO } from 'date-fns';
 import { Pressable } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
@@ -15,6 +15,7 @@ export default function enterFoodScreen() {
     const [foodName, setFoodName] = useState<string>('');
     const [foodList, setFoodList] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const router = useRouter();
 
     //const handleFoodEntry = async () => { }
 
@@ -55,10 +56,8 @@ export default function enterFoodScreen() {
         return format(parsedDate, 'MMMM do yyyy'); // → "July 1st 2025"
     }
     const handlePreviousFoodPress = (foodName: string) => {
-        router.push({
-            pathname: '/foodEntry/individualFoodEntry',
-            params: { foodNameParm: foodName },
-        });
+        setFoodName(foodName)
+        router.setParams({foodName:foodName})
     };
 
 
@@ -87,7 +86,7 @@ export default function enterFoodScreen() {
                                         pressed && { opacity: 0.7 }, // Optional visual feedback
                                     ]}
                                 >
-                                    <Text style={styles.foodText}>{index + 1} {item.food_name}</Text>
+                                    <Text style={styles.foodText}>{index + 1} : {item.food_name}</Text>
                                     <Text style={[styles.timestampText, { fontSize: 12, color: '#888' }]}>
                                         {formatTimestamp(item.created_at)} Last Score: {item.score}
                                     </Text>
@@ -98,7 +97,7 @@ export default function enterFoodScreen() {
                     <Text style={styles.text}>Food:</Text>
                     <TextInput
                         value={foodName}
-                        onChangeText={setFoodName}
+                        onChangeText={handlePreviousFoodPress}
                         placeholder="Ex: Banana, Yogurt, Steak, etc."
                         style={{ backgroundColor: '#f1f1f1', padding: 10, width: '100%', marginBottom: 20 }}
                     />
@@ -107,10 +106,8 @@ export default function enterFoodScreen() {
                         label="Confirm Food Name"
                         onPress={() => {
                             if (foodName.trim()) {
-                                router.navigate({
-                                    pathname: '/foodEntry/individualFoodEntry',
-                                    params: { foodNameParm: foodName },
-                                });
+                                
+                                router.back()
                             } else {
                                 Alert.alert('Please enter a food name.');
                             }
