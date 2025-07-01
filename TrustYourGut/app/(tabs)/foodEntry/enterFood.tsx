@@ -5,11 +5,13 @@ import { supabase } from '@/lib/supabase';
 import { Alert } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { Stack } from 'expo-router';
+import { useState } from 'react';
 
 
 export default function enterFoodScreen() {
 
-
+    const [foodName, setFoodName] = useState<string>('');
+    const handleFoodEntry = async () => { }
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <ScrollView
@@ -22,8 +24,26 @@ export default function enterFoodScreen() {
                     <Text style={styles.text}>Enter Food</Text>
                     <Text style={styles.text}>Previous Food list here... last listing will be for a new item</Text>
                     <Text style={styles.text}>Food:</Text>
-                    <TextInput placeholder="Ex: Banana, Yogurt, Steak, etc." />
-                    
+                    <TextInput
+                        value={foodName}
+                        onChangeText={setFoodName}
+                        placeholder="Ex: Banana, Yogurt, Steak, etc."
+                        style={{ backgroundColor: '#f1f1f1', padding: 10, width: '100%', marginBottom: 20 }}
+                    />
+                    <Button
+                        theme="food"
+                        label="Confirm Food Name"
+                        onPress={() => {
+                            if (foodName.trim()) {
+                                router.navigate({
+                                    pathname: '/foodEntry/individualFoodEntry',
+                                    params: { foodNameParm: foodName },
+                                });
+                            } else {
+                                Alert.alert('Please enter a food name.');
+                            }
+                        }}
+                    />
                 </View>
             </ScrollView>
         </TouchableWithoutFeedback>

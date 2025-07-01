@@ -108,7 +108,7 @@ export default function HomeScreen() {
           <Text style={styles.text}>{listOfWelcomeMessages[randomIndex]}</Text>
           <Text style={styles.text}>
             {numOfLogEntries === 0
-              ? 'Welcome, You have entries! To get started, head over to the food entry tab to log your first meal.'
+              ? 'You have no entries! To get started, head over to the food entry tab to log your first meal.'
               : `You have logged ${numOfLogEntries} ${numOfLogEntries === 1 ? 'time' : 'times'}! Keep it going!`}
           </Text>
 
