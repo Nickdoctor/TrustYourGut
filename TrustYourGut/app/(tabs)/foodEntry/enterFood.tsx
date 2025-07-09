@@ -34,7 +34,8 @@ export default function enterFoodScreen() {
             .from('food_entries')
             .select('*')
             .eq('user_id', userId)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .limit(15);
 
         if (error) {
             console.error('Error fetching food list:', error);
@@ -71,7 +72,7 @@ export default function enterFoodScreen() {
                 <View style={styles.cardContainer}>
                     <Stack.Screen options={{ title: 'Select Food' }} />
                     <Text style={styles.text}>Enter Food</Text>
-                    <Text style={styles.text}>Previous Foods:</Text>
+                    <Text style={styles.text}>Latest Food Entered:</Text>
                     {loading ? (
                         <ActivityIndicator size="small" color="#000" />
                     ) : (
