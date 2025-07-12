@@ -34,12 +34,18 @@ export default function HomeScreen() {
   const [scores, setScores] = useState<number[]>([]);
   const [labels, setLabels] = useState<string[]>([]);
   const [timeRange, setTimeRange] = useState<'1w' | '1m' | '3m'>('1w');
+  const [topFoods, setTopFoods] = useState<{ name: string; score: number }[]>([]);
+  const [bottomFoods, setBottomFoods] = useState<{ name: string; score: number }[]>([]);
+  const [seeMoreGood, setSeeMoreGood] = useState<boolean>(false);
+  const [seeMoreBad, setSeeMoreBad] = useState<boolean>(false);
+
 
 
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchUserData();
     await fetchChartData();
+    await fetchTopAndBottomFoods();
     setRefreshing(false);
   };
 
@@ -120,7 +126,7 @@ export default function HomeScreen() {
       const sum = scoresForDay.reduce((a, b) => a + b, 0);
       return sum / scoresForDay.length;
     });
-    
+
     const reducedLabels = selectedDays.map((label, index) => {
       if (timeRange === '1w') return label;
       if (timeRange === '1m') return index % 5 === 0 ? label : ''; // Show every 5th day
@@ -132,9 +138,59 @@ export default function HomeScreen() {
     setLabels(reducedLabels);
     setScores(averagedScores);
   };
+  const fetchTopAndBottomFoods = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) return;
+    const userId = session.user.id;
+
+    const { data, error } = await supabase
+      .from('food_entries')
+      .select('food_name, score')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Food fetch error:', error.message);
+      return;
+    }
+
+    if (!data) return;
+
+    // Group by food_name
+    const foodMap: Record<string, number[]> = {};
+
+    data.forEach(entry => {
+      if (!entry.food_name || entry.score === null) return;
+      if (!foodMap[entry.food_name]) {
+        foodMap[entry.food_name] = [];
+      }
+      foodMap[entry.food_name].push(Number(entry.score));
+    });
+
+    // Calculate average scores
+    const averagedFoods = Object.entries(foodMap).map(([name, scores]) => {
+      const sum = scores.reduce((a, b) => a + b, 0);
+      const avg = sum / scores.length;
+      return { name, score: avg };
+    });
+
+    // Sort by score descending
+    const sorted = averagedFoods.sort((a, b) => b.score - a.score);
+
+    setTopFoods(sorted.slice(0, 10));
+    console.log('Top Foods:', topFoods);
+    setBottomFoods(sorted.slice(-10).reverse());
+    console.log('Bottom Foods:', bottomFoods);
+
+  };
+
 
   useEffect(() => {
     fetchUserData(); // Runs only once on mount
+    fetchTopAndBottomFoods();
+    //fetchChartData();
     setWelcomeIndex(Math.floor(Math.random() * listOfWelcomeMessages.length)); // Randomly select a welcome message, if same message appears, add this line to refresh section. 
   }, []);
 
@@ -179,7 +235,15 @@ export default function HomeScreen() {
             <LineChart
               data={{
                 labels,
-                datasets: [{ data: scores }],
+                datasets: [{
+                  data: scores
+                },
+                {
+                  data: [5], //highest graph value
+                  withDots: false, //a flag to make it hidden
+                },
+                
+              ],
               }}
               width={screenWidth - 32}
               height={220}
@@ -216,8 +280,37 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))}
           </View>
+          <View style={styles.cardContainer}>
+            <View style={[styles.card, styles.cardGood]}>
+              <Text style={styles.cardTitle}>Highest Scored Foods</Text>
+              {(seeMoreGood ? topFoods.slice(0, 10) : topFoods.slice(0, 3)).map((food, index) => (
+                <Text key={index} style={styles.cardItem}>
+                  {food.name}: {food.score}/5
+                </Text>
+              ))}
 
+              <TouchableOpacity onPress={() => setSeeMoreGood(prev => !prev)}>
+                <Text style={styles.cardToggle}>
+                  {topFoods.length > 3 ? (seeMoreGood ? 'See Less' : 'See More') : null}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
+            <View style={[styles.card, styles.cardBad]}>
+              <Text style={styles.cardTitle}>Lowest Scored Foods</Text>
+              {(seeMoreBad ? bottomFoods.slice(0, 10) : bottomFoods.slice(0, 3)).map((food, index) => (
+                <Text key={index} style={styles.cardItem}>
+                  {food.name}: {food.score}/5
+                </Text>
+              ))}
+
+              <TouchableOpacity onPress={() => setSeeMoreBad(prev => !prev)}>
+                <Text style={styles.cardToggle}>
+                  {bottomFoods.length > 3 ? (seeMoreBad ? 'See Less' : 'See More') : null}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </TouchableWithoutFeedback>
@@ -226,7 +319,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    //flex: 1,
     backgroundColor: '#25292e',
     alignItems: 'center',
     justifyContent: 'center',
@@ -277,6 +370,49 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  cardContainer: {
+    width: '100%',
+    paddingHorizontal: 20,
+    marginBottom: 40,
+  },
+  card: {
+    backgroundColor: '#333',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  cardGood: {
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderLeftColor: '#28a745', // green
+    borderRightColor: '#28a745', // green
+  },
+
+  cardBad: {
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderLeftColor: '#dc3545', // red
+    borderRightColor: '#dc3545', // red
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1E90FF',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  cardItem: {
+    color: '#fff',
+    fontSize: 16,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  cardToggle: {
+    color: '#1E90FF',
+    textAlign: 'center',
+    marginTop: 8,
+    fontWeight: 'bold',
   },
 
 });

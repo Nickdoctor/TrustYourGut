@@ -40,7 +40,6 @@ export default function AboutScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <Text style={styles.header}>About Trust Your Gut</Text>
-      <Text style={styles.header}>Add Dev Branch</Text>
       <Text style={styles.text}>
         Trust Your Gut is a food diary app designed to help you track your meals and identify potential food sensitivities.
         By logging your food intake and any symptoms you experience, you can gain insights into how different foods affect your body.
