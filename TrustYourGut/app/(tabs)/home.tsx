@@ -38,7 +38,9 @@ export default function HomeScreen() {
   const [bottomFoods, setBottomFoods] = useState<{ name: string; score: number }[]>([]);
   const [seeMoreGood, setSeeMoreGood] = useState<boolean>(false);
   const [seeMoreBad, setSeeMoreBad] = useState<boolean>(false);
-
+  const tagCounts: Record<string, number> = {};
+  const [sortedTags, setSortedTags] = useState<{ name: string; count: number }[]>([]);
+  const [seeMoreTags, setSeeMoreTags] = useState<boolean>(false);
 
 
   const onRefresh = async () => {
@@ -46,6 +48,7 @@ export default function HomeScreen() {
     await fetchUserData();
     await fetchChartData();
     await fetchTopAndBottomFoods();
+    await fetchTopTags();
     setRefreshing(false);
   };
 
@@ -186,11 +189,56 @@ export default function HomeScreen() {
 
   };
 
+  const fetchTopTags = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) return;
+    const userId = session.user.id;
+
+    const { data: tagData, error } = await supabase
+      .from('food_entries')
+      .select('tag')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Chart data error:', error.message);
+      return;
+    }
+
+    if (!tagData) return;
+
+    for (const row of tagData) { //For each row in tag data, and each tag in the row, increment the count of that tag in tagCounts.
+      const tags: string[] = row.tag;
+
+      if (Array.isArray(tags)) {
+        for (const tag of tags) {
+          if (tag in tagCounts) {
+            tagCounts[tag]++;
+          } else {
+            tagCounts[tag] = 1;
+          }
+        }
+      }
+    }
+
+    console.log('Tag counts:', tagCounts);
+    setSortedTags(
+      Object.entries(tagCounts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+    );
+
+  }
+
 
   useEffect(() => {
     fetchUserData(); // Runs only once on mount
     fetchTopAndBottomFoods();
     //fetchChartData();
+    fetchTopTags();
     setWelcomeIndex(Math.floor(Math.random() * listOfWelcomeMessages.length)); // Randomly select a welcome message, if same message appears, add this line to refresh section. 
   }, []);
 
@@ -242,8 +290,8 @@ export default function HomeScreen() {
                   data: [5], //highest graph value
                   withDots: false, //a flag to make it hidden
                 },
-                
-              ],
+
+                ],
               }}
               width={screenWidth - 32}
               height={220}
@@ -307,6 +355,19 @@ export default function HomeScreen() {
               <TouchableOpacity onPress={() => setSeeMoreBad(prev => !prev)}>
                 <Text style={styles.cardToggle}>
                   {bottomFoods.length > 3 ? (seeMoreBad ? 'See Less' : 'See More') : null}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.card, styles.cardTag]}>
+              <Text style={styles.cardTitle}>Most Used Food Tags</Text>
+              {(seeMoreTags ? sortedTags : sortedTags.slice(0, 3)).map((tag, index) => (
+                <Text key={index} style={styles.cardItem}>
+                  {tag.name}: {tag.count}
+                </Text>
+              ))}
+              <TouchableOpacity onPress={() => setSeeMoreTags(prev => !prev)}>
+                <Text style={styles.cardToggle}>
+                  {sortedTags.length > 3 ? (seeMoreTags ? 'See Less' : 'See More') : null}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -394,6 +455,12 @@ const styles = StyleSheet.create({
     borderRightWidth: 5,
     borderLeftColor: '#dc3545', // red
     borderRightColor: '#dc3545', // red
+  },
+  cardTag: {
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderLeftColor: '#1E90FF', // blue
+    borderRightColor: '#1E90FF', // blue
   },
   cardTitle: {
     fontSize: 18,
