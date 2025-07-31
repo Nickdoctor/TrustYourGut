@@ -69,8 +69,7 @@ export default function foodEntryScreen() {
       <Button theme="" label="Enter test row" onPress={enterTestRow} />
       <Button theme="" label="Delete all test rows" onPress={deleteTestRow} />
       <Button theme="" label="Enter Individual Food Item" onPress={() => router.navigate('/foodEntry/individualFoodEntry')} />
-
-
+      <Button theme="" label="View History" onPress={() => router.navigate('/foodEntry/history')} />
     </View>
   );
 }
