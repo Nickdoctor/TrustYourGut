@@ -290,7 +290,6 @@ export default function HomeScreen() {
                   data: [5], //highest graph value
                   withDots: false, //a flag to make it hidden
                 },
-
                 ],
               }}
               width={screenWidth - 32}

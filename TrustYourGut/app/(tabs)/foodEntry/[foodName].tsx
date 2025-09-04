@@ -5,12 +5,12 @@ import { supabase } from "@/lib/supabase";
 import { LineChart } from "react-native-chart-kit";
 import { Dimensions } from "react-native";
 
-type FoodEntry = { // Define the structure of a food entry from database
+type FoodEntry = { // Define the structure of a food entry object from database
   id: string;
   created_at: string;
   food_name: string;
-  score: string; // stored as text in your DB
-  tags: string[]; // assuming you store tags as array (jsonb in supabase)
+  score: string; // stored as text
+  tag: string[]; // array of tags 
 };
 
 export default function FoodHistoryScreen() {
@@ -52,7 +52,7 @@ export default function FoodHistoryScreen() {
         // count tags
         const counts: Record<string, number> = {};
         data.forEach((d) => {
-          d.tags?.forEach((t: string) => {
+          d.tag?.forEach((t: string) => {
             counts[t] = (counts[t] || 0) + 1;
           });
         });
@@ -100,6 +100,9 @@ export default function FoodHistoryScreen() {
                 {
                   data: foodEntries.map((e) => parseInt(e.score, 10) || 0),
                 },
+                { data: [5],
+                  withDots: false,
+                }
               ],
             }}
             width={Dimensions.get("window").width - 40}
