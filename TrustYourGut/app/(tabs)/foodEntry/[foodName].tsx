@@ -20,7 +20,7 @@ export default function FoodHistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [avgScore, setAvgScore] = useState<number | null>(null);
 
-   useEffect(() => {
+  useEffect(() => {
     const fetchData = async () => {
 
       setLoading(true);
@@ -45,8 +45,8 @@ export default function FoodHistoryScreen() {
         if (scores.length === 1) {
           setAvgScore(scores[0]); // If only one score, set it directly
         } else {
-        const avg = scores.reduce((a, b) => a + b, 0) / (scores.length);
-        setAvgScore(avg);
+          const avg = scores.reduce((a, b) => a + b, 0) / (scores.length);
+          setAvgScore(avg);
         }
 
         // count tags
@@ -78,8 +78,8 @@ export default function FoodHistoryScreen() {
     );
   }
 
-  const recommend =
-    avgScore !== null ? (avgScore <= 2 ? "❌ Not Recommended" : "✅ Recommended") : "";
+  const recommend = avgScore !== null ? (avgScore >= 3.5 ? "✅ Recommended" : avgScore >= 2.5 ? "❌ Not Recommended" : "👎🏻 Definitely Not Recommended!") : "NULL";
+  const recentEntries = foodEntries.slice(-10); // last 10 items
 
   return (
     <View style={styles.container}>
@@ -91,18 +91,20 @@ export default function FoodHistoryScreen() {
       ) : (
         <>
           {/* Line Chart of Scores Over Time */}
+
           <LineChart
-            data={{
-              labels: foodEntries.map((e) =>
-                new Date(e.created_at).toLocaleDateString()
+            data={{ //Show last ten entries in the chart where the first and last data points are always labeled, and every second point in between is labeled to avoid clutter
+              labels: recentEntries.map((e, i) =>
+                i === 0 || i === recentEntries.length-1 || i % 2 === 0  ?   new Date(e.created_at).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit" }) : ""
               ),
               datasets: [
                 {
-                  data: foodEntries.map((e) => parseInt(e.score, 10) || 0),
+                  data: recentEntries.map((e) => parseInt(e.score, 10) || 0),
                 },
-                { data: [5],
+                {
+                  data: [5],
                   withDots: false,
-                }
+                },
               ],
             }}
             width={Dimensions.get("window").width - 40}
@@ -114,29 +116,42 @@ export default function FoodHistoryScreen() {
               decimalPlaces: 0,
               color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
               labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+              propsForLabels: {
+                rotation: 45, // tilt labels 45 degrees
+                fontSize: 10, // make labels smaller
+              },
             }}
             style={{ marginVertical: 16, borderRadius: 16 }}
           />
 
           {/* Average Score & Recommendation */}
-          <Text style={styles.text}>
-            Average Score: {avgScore?.toFixed(1)} {recommend}
-          </Text>
-
+          <View style={styles.centerSection}>
+            <View style={styles.scoreContainer}>
+              <Text style={styles.label}>Average Score:</Text>
+              <Text
+                style={[
+                  styles.score,
+                  avgScore ? (avgScore >= 3.5 ? styles.good : avgScore >= 2.5 ? styles.ok : styles.bad) : styles.bad,
+                ]}
+              >
+                {avgScore?.toFixed(1)}
+              </Text>
+            </View>
+            <Text style={styles.recommend}>{recommend}</Text>
+          </View>
           {/* Most Common Tags */}
-          <Text style={styles.subheading}>Most Common Tags:</Text>
-          {tagCounts.length === 0 ? (
-            <Text style={styles.text}>No tags found.</Text>
-          ) : (
-            tagCounts.slice(0, 3).map((tag, i) => (
-              <Text key={i} style={styles.text}>
+          <View style={[styles.card, styles.cardTag]}>
+            <Text style={styles.cardTitle}>Most Common Tags</Text>
+            {tagCounts.slice(0, 3).map((tag, i) => (
+              <Text key={i} style={styles.cardItem}>
                 {tag.name}: {tag.count}
               </Text>
-            ))
-          )}
+            ))}
+          </View>
         </>
-      )}
-    </View>
+      )
+      }
+    </View >
   );
 }
 
@@ -150,6 +165,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 20,
     fontWeight: "bold",
+    textAlign: "center",
   },
   subheading: {
     color: "#fff",
@@ -160,5 +176,71 @@ const styles = StyleSheet.create({
   text: {
     color: "#fff",
     marginTop: 6,
+  },
+  card: {
+    backgroundColor: '#333',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  cardTag: {
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderLeftColor: '#1E90FF', // blue
+    borderRightColor: '#1E90FF', // blue
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1E90FF',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  cardItem: {
+    color: '#fff',
+    fontSize: 16,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  scoreContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  label: {
+    color: "#fff",
+    fontSize: 16,
+    marginRight: 6,
+  },
+  score: {
+    fontSize: 18,
+    fontWeight: "bold",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginRight: 6,
+  },
+  good: {
+    backgroundColor: "#4CAF50", // green
+    color: "#fff",
+  },
+  ok: {
+    backgroundColor: "#FFC107", // yellow
+    color: "#000",
+  },
+  bad: {
+    backgroundColor: "#F44336", // red
+    color: "#fff",
+  },
+  recommend: {
+    color: "#ccc",
+    fontSize: 14,
+    textAlign: "center",
+  },
+  centerSection: {
+    alignItems: "center",  // centers children horizontally
+    marginVertical: 12,
   },
 });
