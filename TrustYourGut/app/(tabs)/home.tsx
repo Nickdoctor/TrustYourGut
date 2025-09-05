@@ -287,6 +287,10 @@ export default function HomeScreen() {
                   data: scores
                 },
                 {
+                  data: [1], //lowest graph value
+                  withDots: false, //a flag to make it hidden
+                },
+                {
                   data: [5], //highest graph value
                   withDots: false, //a flag to make it hidden
                 },
@@ -332,7 +336,7 @@ export default function HomeScreen() {
               <Text style={styles.cardTitle}>Highest Scored Foods</Text>
               {(seeMoreGood ? topFoods.slice(0, 10) : topFoods.slice(0, 3)).map((food, index) => (
                 <Text key={index} style={styles.cardItem}>
-                  {food.name}: {food.score}/5
+                  {food.name}: {food.score.toFixed(1)}/5
                 </Text>
               ))}
 
@@ -347,7 +351,7 @@ export default function HomeScreen() {
               <Text style={styles.cardTitle}>Lowest Scored Foods</Text>
               {(seeMoreBad ? bottomFoods.slice(0, 10) : bottomFoods.slice(0, 3)).map((food, index) => (
                 <Text key={index} style={styles.cardItem}>
-                  {food.name}: {food.score}/5
+                  {food.name}: {food.score.toFixed(1)}/5
                 </Text>
               ))}
 

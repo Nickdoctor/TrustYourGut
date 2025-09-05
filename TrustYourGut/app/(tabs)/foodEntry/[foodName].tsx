@@ -80,7 +80,7 @@ export default function FoodHistoryScreen() {
 
   const recommend = avgScore !== null ? (avgScore >= 3.5 ? "✅ Recommended" : avgScore >= 2.5 ? "❌ Not Recommended" : "👎🏻 Definitely Not Recommended!") : "NULL";
   const recentEntries = foodEntries.slice(-10); // last 10 items
-
+  console.log(recentEntries);
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: foodName }} />
@@ -100,6 +100,10 @@ export default function FoodHistoryScreen() {
               datasets: [
                 {
                   data: recentEntries.map((e) => parseInt(e.score, 10) || 0),
+                },
+                {
+                  data: [1],
+                  withDots: false,
                 },
                 {
                   data: [5],
