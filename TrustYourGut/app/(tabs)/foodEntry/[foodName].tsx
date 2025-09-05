@@ -4,6 +4,12 @@ import { Text, View, StyleSheet, ActivityIndicator } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { LineChart } from "react-native-chart-kit";
 import { Dimensions } from "react-native";
+import {
+  TouchableWithoutFeedback,
+  Keyboard,
+  ScrollView,
+  RefreshControl,
+} from 'react-native';
 
 type FoodEntry = { // Define the structure of a food entry object from database
   id: string;
@@ -11,6 +17,7 @@ type FoodEntry = { // Define the structure of a food entry object from database
   food_name: string;
   score: string; // stored as text
   tag: string[]; // array of tags 
+  description: string; // description given by user
 };
 
 export default function FoodHistoryScreen() {
@@ -19,6 +26,10 @@ export default function FoodHistoryScreen() {
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [avgScore, setAvgScore] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = () => {
+    setRefreshing(true);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -27,7 +38,7 @@ export default function FoodHistoryScreen() {
 
       const { data, error } = await supabase //Select food entries from the database that equal the foodName from the URL parameters
         .from("food_entries")
-        .select("id, created_at, food_name, score, tag")
+        .select("id, created_at, food_name, score, tag, description")
         .eq("food_name", foodName)
         .order("created_at", { ascending: true });
 
@@ -82,20 +93,26 @@ export default function FoodHistoryScreen() {
   const recentEntries = foodEntries.slice(-10); // last 10 items
   console.log(recentEntries);
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: foodName }} />
-      <Text style={styles.heading}>History for: {foodName}</Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.container}>
+          <Stack.Screen options={{ title: foodName }} />
+          <Text style={styles.heading}>History for: {foodName}</Text>
 
-      {foodEntries.length === 0 ? (
-        <Text style={styles.text}>No history found.</Text>
-      ) : (
-        <>
+
+
           {/* Line Chart of Scores Over Time */}
 
           <LineChart
             data={{ //Show last ten entries in the chart where the first and last data points are always labeled, and every second point in between is labeled to avoid clutter
               labels: recentEntries.map((e, i) =>
-                i === 0 || i === recentEntries.length-1 || i % 2 === 0  ?   new Date(e.created_at).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit" }) : ""
+                i === 0 || i === recentEntries.length - 1 || i % 2 === 0 ? new Date(e.created_at).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit" }) : ""
               ),
               datasets: [
                 {
@@ -152,17 +169,37 @@ export default function FoodHistoryScreen() {
               </Text>
             ))}
           </View>
-        </>
-      )
-      }
-    </View >
+          {/* Most recent entry */}
+          <View style={[styles.card, styles.cardTag, { borderColor: '#ff1e1eff' }]}>
+            <Text style={[styles.cardTitle]}>Most Recent Entry</Text>
+            <Text style={styles.cardItem}>
+              Score Given: {recentEntries[recentEntries.length - 1].score}/5
+            </Text>
+            <Text style={styles.cardItem}>
+              Entered On: {new Date(recentEntries[recentEntries.length - 1].created_at).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit" })}
+            </Text>
+          </View>
+          {/* Most recent description */}
+          <View style={[styles.card, styles.cardTag, { borderColor: '#1eff2dff' }]}>
+            <Text style={[styles.cardTitle]}>Most Recent Description Given</Text>
+            <Text style={styles.cardItem}>
+              {recentEntries[recentEntries.length - 1].description === "" ||
+                recentEntries[recentEntries.length - 1].description === null
+                ? 'No description given.'
+                : `You Said: ${recentEntries[recentEntries.length - 1].description}`}
+            </Text>
+
+          </View>
+        </View >
+      </ScrollView>
+    </TouchableWithoutFeedback>
+
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    flex: 1,
     backgroundColor: "#25292e",
   },
   heading: {
@@ -190,8 +227,7 @@ const styles = StyleSheet.create({
   cardTag: {
     borderLeftWidth: 5,
     borderRightWidth: 5,
-    borderLeftColor: '#1E90FF', // blue
-    borderRightColor: '#1E90FF', // blue
+    borderColor: '#1E90FF', // blue
   },
   cardTitle: {
     fontSize: 18,
@@ -246,5 +282,8 @@ const styles = StyleSheet.create({
   centerSection: {
     alignItems: "center",  // centers children horizontally
     marginVertical: 12,
+  },
+  scrollContainer: {
+    flexGrow: 1,               // ✅ allow scroll to grow naturally
   },
 });
