@@ -92,6 +92,7 @@ export default function FoodHistoryScreen() {
   const recommend = avgScore !== null ? (avgScore >= 3.5 ? "✅ Recommended" : avgScore >= 2.5 ? "❌ Not Recommended" : "👎🏻 Definitely Not Recommended!") : "NULL";
   const recentEntries = foodEntries.slice(-10); // last 10 items
   console.log(recentEntries);
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <ScrollView
@@ -144,22 +145,39 @@ export default function FoodHistoryScreen() {
             }}
             style={{ marginVertical: 16, borderRadius: 16 }}
           />
+          {/* Stats Card */}
+          <View style={styles.statsCard}>
+            {/* Total Entries */}
+            <View style={styles.statBlock}>
+              <Text style={styles.statLabel}>Total Entries</Text>
+              <Text style={styles.statValue}>{foodEntries.length}</Text>
+            </View>
 
-          {/* Average Score & Recommendation */}
-          <View style={styles.centerSection}>
-            <View style={styles.scoreContainer}>
-              <Text style={styles.label}>Average Score:</Text>
+            {/* Average Score */}
+            <View style={styles.statBlock}>
+              <Text style={styles.statLabel}>Average Score</Text>
               <Text
                 style={[
-                  styles.score,
-                  avgScore ? (avgScore >= 3.5 ? styles.good : avgScore >= 2.5 ? styles.ok : styles.bad) : styles.bad,
+                  styles.statValue,
+                  avgScore
+                    ? avgScore >= 3.5
+                      ? styles.good
+                      : avgScore >= 2.5
+                        ? styles.ok
+                        : styles.bad
+                    : styles.bad,
                 ]}
               >
-                {avgScore?.toFixed(1)}
+                {avgScore?.toFixed(1) ?? "--"}
               </Text>
             </View>
-            <Text style={styles.recommend}>{recommend}</Text>
+
+            {/* Recommendation */}
+            <View style={styles.statBlock}>
+              <Text style={styles.recommend}>{recommend}</Text>
+            </View>
           </View>
+
           {/* Most Common Tags */}
           <View style={[styles.card, styles.cardTag]}>
             <Text style={styles.cardTitle}>Most Common Tags</Text>
@@ -286,4 +304,35 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,               // ✅ allow scroll to grow naturally
   },
+  statsCard: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+    marginVertical: 12,
+  },
+
+  statBlock: {
+    alignItems: "center",
+    flex: 1,
+  },
+
+  statLabel: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 4,
+  },
+
+  statValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+ 
+
 });
