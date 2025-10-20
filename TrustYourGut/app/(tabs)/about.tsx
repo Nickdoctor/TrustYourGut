@@ -82,11 +82,6 @@ export default function AboutScreen() {
         </View>
       </View>
 
-      {/* Divider */}
-      <View style={styles.dividerContainer}>
-        <View style={styles.divider} />
-      </View>
-
       {/* ===== App Section ===== */}
       <View style={styles.card}>
         <Text style={styles.subHeader}>About Trust Your Gut</Text>
@@ -102,18 +97,30 @@ export default function AboutScreen() {
           however I did not have the knowledge to make it yet. Since graduating, I have been working on side projects, applying to jobs, and learning new skills hopefully start my
           career as a software developer.
         </Text>
-      </View>
 
+        <Text style={styles.text}>
+          Check out the science behind just how important gut health is to our overall well-being! ⬇️
+        </Text>
+        <View style={styles.buttonWrapper}>
+          <FontAwesome.Button
+            style={styles.wideButton}
+            name="info"
+            backgroundColor="#54191fff"
+            onPress={() => Linking.openURL('https://www.hopkinsmedicine.org/health/wellness-and-prevention/the-brain-gut-connection')}>
+            More Info
+          </FontAwesome.Button>
+        </View>
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 60,
-    paddingHorizontal: 20,
-    backgroundColor: '#1e1f25',
+    backgroundColor: '#25292e',
     alignItems: 'center',
+    paddingVertical: 30,
+    paddingHorizontal: 16,
   },
   card: {
     backgroundColor: '#2a2b32',
@@ -127,6 +134,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 5,
+    marginBottom: 30,
   },
   subHeader: {
     fontSize: 24,
