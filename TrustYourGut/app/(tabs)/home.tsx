@@ -41,7 +41,7 @@ export default function HomeScreen() {
   const tagCounts: Record<string, number> = {};
   const [sortedTags, setSortedTags] = useState<{ name: string; count: number }[]>([]);
   const [seeMoreTags, setSeeMoreTags] = useState<boolean>(false);
-
+  const [currentStreak, setCurrentStreak] = useState<number>(0);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -233,12 +233,71 @@ export default function HomeScreen() {
 
   }
 
+  const calculateCurrentStreak = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const userId = session.user.id;
+    const { data: entries, error } = await supabase
+      .from('food_entries')
+      .select('created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching entries for streak:', error.message);
+      return;
+    }
+
+    if (!entries || entries.length === 0) {
+      setCurrentStreak(0);
+      return;
+    }
+
+    let streak = 0;
+    let prevDate = new Date(); // start from today
+
+    for (const entry of entries) {
+      const entryDate = new Date(entry.created_at);
+
+      // Strip times (normalize to midnight)
+      const entryDay = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+      const prevDay = new Date(prevDate.getFullYear(), prevDate.getMonth(), prevDate.getDate());
+
+      const diffDays = Math.floor((prevDay.getTime() - entryDay.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) {
+        // Same day as previous (multiple entries today) — ignore but count once
+        if (streak === 0) streak++;
+        continue;
+      } else if (diffDays === 1) {
+        // Consecutive day
+        streak++;
+        prevDate = entryDay;
+      } else {
+        // Gap > 1 day → streak breaks
+        break;
+      }
+    }
+
+    // If no entry today but the last one was yesterday → streak should be 1
+    const lastEntryDate = new Date(entries[0].created_at);
+    const lastEntryDay = new Date(lastEntryDate.getFullYear(), lastEntryDate.getMonth(), lastEntryDate.getDate());
+    const today = new Date();
+    const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const diffFromToday = Math.floor((todayDay.getTime() - lastEntryDay.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffFromToday === 1 && streak === 0) streak = 1;
+
+    setCurrentStreak(streak);
+  };
 
   useEffect(() => {
     fetchUserData(); // Runs only once on mount
     fetchTopAndBottomFoods();
     //fetchChartData();
     fetchTopTags();
+    calculateCurrentStreak();
     setWelcomeIndex(Math.floor(Math.random() * listOfWelcomeMessages.length)); // Randomly select a welcome message, if same message appears, add this line to refresh section. 
   }, []);
 
@@ -248,73 +307,63 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator />
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#1E90FF" />
       </View>
     );
   }
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <ScrollView
-        contentContainerStyle={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.scrollContainer}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { }} />}
       >
-        <View style={styles.container}>
-          <Stack.Screen />
-          <Text style={styles.welcomeText}>
-            Welcome{firstName ? `, ${firstName}` : ''}!
-          </Text>
-          <Text style={styles.text}>{listOfWelcomeMessages[welcomeIndex]}</Text>
-          <Text style={styles.text}>
-            {numOfLogEntries === 0
-              ? 'You have no entries! To get started, head over to the food entry tab to log your first meal.'
-              : `You have logged ${numOfLogEntries} ${numOfLogEntries === 1 ? 'time' : 'times'
-              }! Keep it going!`}
-          </Text>
-          <Text style={styles.text}>Average Gut Feeling:</Text>
+        <Stack.Screen />
 
+        {/* Header Section */}
+        <View style={styles.card}>
+          <Text style={styles.welcomeText}>
+            👋Hello{firstName ? `, ${firstName}` : ''}!
+          </Text>
+          <Text style={styles.subText}>{listOfWelcomeMessages[welcomeIndex]}</Text>
+          <Text style={styles.entryText}>
+            {numOfLogEntries === 0
+              ? 'You have no entries yet. Head to the Food Entry tab to get started!'
+              : `You’ve logged ${numOfLogEntries} ${numOfLogEntries === 1 ? 'time' : 'times'}! Keep it going!`}
+          </Text>
+        </View>
+        {/* Chart Section */}
+        <View style={styles.card}>
+          <Text style={styles.cardHeader}>Average Gut Feeling 🍽️</Text>
           {scores.length === 0 ? (
-            <Text style={styles.text}>No gut scores to show yet.</Text>
+            <Text style={styles.text}>No gut scores yet.</Text>
           ) : (
             <LineChart
               data={{
                 labels,
-                datasets: [{
-                  data: scores
-                },
-                {
-                  data: [1], //lowest graph value
-                  withDots: false, //a flag to make it hidden
-                },
-                {
-                  data: [5], //highest graph value
-                  withDots: false, //a flag to make it hidden
-                },
+                datasets: [
+                  { data: scores },
+                  { data: [1], withDots: false },
+                  { data: [5], withDots: false },
                 ],
               }}
-              width={screenWidth - 32}
+              width={screenWidth - 40}
               height={220}
               yAxisSuffix="/5"
               fromZero
               chartConfig={{
-                backgroundGradientFrom: '#fff',
-                backgroundGradientTo: '#fff',
+                backgroundGradientFrom: '#2a2b32',
+                backgroundGradientTo: '#2a2b32',
                 decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
-                labelColor: () => '#333',
-                propsForDots: {
-                  r: '2',
-                  strokeWidth: '2',
-                  stroke: '#1E90FF',
-                },
+                color: (opacity = 1) => `rgba(30, 144, 255, ${opacity})`,
+                labelColor: () => '#aaa',
+                propsForDots: { r: '3', strokeWidth: '2', stroke: '#1E90FF' },
               }}
               style={styles.chart}
             />
           )}
+
           <View style={styles.timeRangeButtons}>
             {['1w', '1m', '3m'].map((range) => (
               <TouchableOpacity
@@ -325,55 +374,75 @@ export default function HomeScreen() {
                   timeRange === range && styles.timeButtonActive,
                 ]}
               >
-                <Text style={styles.timeButtonText}>
+                <Text
+                  style={[
+                    styles.timeButtonText,
+                    timeRange === range && styles.timeButtonTextActive,
+                  ]}
+                >
                   {range.toUpperCase()}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
-          <View style={styles.cardContainer}>
-            <View style={[styles.card, styles.cardGood]}>
-              <Text style={styles.cardTitle}>Highest Scored Foods</Text>
-              {(seeMoreGood ? topFoods.slice(0, 10) : topFoods.slice(0, 3)).map((food, index) => (
-                <Text key={index} style={styles.cardItem}>
-                  {food.name}: {food.score.toFixed(1)}/5
-                </Text>
-              ))}
+        </View>
 
-              <TouchableOpacity onPress={() => setSeeMoreGood(prev => !prev)}>
-                <Text style={styles.cardToggle}>
-                  {topFoods.length > 3 ? (seeMoreGood ? 'See Less' : 'See More') : null}
+        {/* Streak Section */}
+        <View style={styles.statsContainer}>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Current Streak 🔥</Text>
+            <Text style={styles.cardItem}>{currentStreak} days</Text>
+          </View>
+        </View>
+
+        {/* Stats Section */}
+        <View style={styles.statsContainer}>
+          <View style={[styles.card, styles.cardGood]}>
+            <Text style={styles.cardTitle}>Top Foods ✅</Text>
+            {(seeMoreGood ? topFoods : topFoods.slice(0, 3)).map((food, i) => (
+              <Text key={i} style={styles.cardItem}>
+                {food.name}: {food.score.toFixed(1)}/5
+              </Text>
+            ))}
+            {topFoods.length > 3 && (
+              <TouchableOpacity onPress={() => setSeeMoreGood(!seeMoreGood)}>
+                <Text style={styles.toggleText}>
+                  {seeMoreGood ? 'See Less' : 'See More'}
                 </Text>
               </TouchableOpacity>
-            </View>
+            )}
+          </View>
 
-            <View style={[styles.card, styles.cardBad]}>
-              <Text style={styles.cardTitle}>Lowest Scored Foods</Text>
-              {(seeMoreBad ? bottomFoods.slice(0, 10) : bottomFoods.slice(0, 3)).map((food, index) => (
-                <Text key={index} style={styles.cardItem}>
-                  {food.name}: {food.score.toFixed(1)}/5
-                </Text>
-              ))}
-
-              <TouchableOpacity onPress={() => setSeeMoreBad(prev => !prev)}>
-                <Text style={styles.cardToggle}>
-                  {bottomFoods.length > 3 ? (seeMoreBad ? 'See Less' : 'See More') : null}
+          <View style={[styles.card, styles.cardBad]}>
+            <Text style={styles.cardTitle}>Lowest Foods ❌</Text>
+            {(seeMoreBad ? bottomFoods : bottomFoods.slice(0, 3)).map((food, i) => (
+              <Text key={i} style={styles.cardItem}>
+                {food.name}: {food.score.toFixed(1)}/5
+              </Text>
+            ))}
+            {bottomFoods.length > 3 && (
+              <TouchableOpacity onPress={() => setSeeMoreBad(!seeMoreBad)}>
+                <Text style={styles.toggleText}>
+                  {seeMoreBad ? 'See Less' : 'See More'}
                 </Text>
               </TouchableOpacity>
-            </View>
-            <View style={[styles.card, styles.cardTag]}>
-              <Text style={styles.cardTitle}>Most Used Food Tags</Text>
-              {(seeMoreTags ? sortedTags : sortedTags.slice(0, 3)).map((tag, index) => (
-                <Text key={index} style={styles.cardItem}>
-                  {tag.name}: {tag.count}
-                </Text>
-              ))}
-              <TouchableOpacity onPress={() => setSeeMoreTags(prev => !prev)}>
-                <Text style={styles.cardToggle}>
-                  {sortedTags.length > 3 ? (seeMoreTags ? 'See Less' : 'See More') : null}
+            )}
+          </View>
+
+          <View style={[styles.card, styles.cardTag]}>
+            <Text style={styles.cardTitle}>Top Food Tags 💠</Text>
+            {(seeMoreTags ? sortedTags : sortedTags.slice(0, 3)).map((tag, i) => (
+              <Text key={i} style={styles.cardItem}>
+                {tag.name}: {tag.count}
+              </Text>
+            ))}
+            {sortedTags.length > 3 && (
+              <TouchableOpacity onPress={() => setSeeMoreTags(!seeMoreTags)}>
+                <Text style={styles.toggleText}>
+                  {seeMoreTags ? 'See Less' : 'See More'}
                 </Text>
               </TouchableOpacity>
-            </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -382,94 +451,106 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    //flex: 1,
+  loaderContainer: {
+    flex: 1,
+    backgroundColor: '#25292e',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollContainer: {
     backgroundColor: '#25292e',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 8,
+    paddingVertical: 30,
+    paddingHorizontal: 16,
   },
   welcomeText: {
+    fontSize: 30,
+    fontWeight: '700',
     color: '#fff',
-    fontSize: 32,
-    fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 10,
-    letterSpacing: 1,
+    marginBottom: 6,
   },
-  button: {
-    fontSize: 20,
-    textDecorationLine: 'underline',
-    color: '#fff',
+  subText: {
+    color: '#aaa',
+    fontSize: 16,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  entryText: {
+    color: '#ddd',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 22,
+    paddingHorizontal: 8,
+  },
+  card: {
+    backgroundColor: '#2a2b32',
+    borderRadius: 18,
+    padding: 20,
+    width: '100%',
+    maxWidth: 650,
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  cardHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1E90FF',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   chart: {
-    marginVertical: 8,
     borderRadius: 16,
   },
   timeRangeButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    paddingHorizontal: 20,
-    marginTop: 10,
-    marginBottom: 20,
+    justifyContent: 'center',
+    marginTop: 16,
+    gap: 10,
   },
-
   timeButton: {
     paddingVertical: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     borderRadius: 20,
-    backgroundColor: '#444',
+    backgroundColor: '#3a3b40',
   },
-
   timeButtonActive: {
     backgroundColor: '#1E90FF',
   },
-
   timeButtonText: {
+    color: '#ccc',
+    fontWeight: '600',
+  },
+  timeButtonTextActive: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
   },
-  cardContainer: {
+  statsContainer: {
     width: '100%',
-    paddingHorizontal: 20,
-    marginBottom: 40,
-  },
-  card: {
-    backgroundColor: '#333',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    maxWidth: 650,
+    gap: 20,
   },
   cardGood: {
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderLeftColor: '#28a745', // green
-    borderRightColor: '#28a745', // green
+    borderLeftWidth: 4,
+    borderLeftColor: '#28a745',
   },
-
   cardBad: {
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderLeftColor: '#dc3545', // red
-    borderRightColor: '#dc3545', // red
+    borderLeftWidth: 4,
+    borderLeftColor: '#dc3545',
   },
   cardTag: {
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderLeftColor: '#1E90FF', // blue
-    borderRightColor: '#1E90FF', // blue
+    borderLeftWidth: 4,
+    borderLeftColor: '#1E90FF',
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1E90FF',
-    marginBottom: 8,
+    marginBottom: 10,
     textAlign: 'center',
   },
   cardItem: {
@@ -478,11 +559,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textAlign: 'center',
   },
-  cardToggle: {
+  toggleText: {
     color: '#1E90FF',
-    textAlign: 'center',
-    marginTop: 8,
     fontWeight: 'bold',
+    marginTop: 8,
   },
-
+  text: {
+    color: '#ccc',
+    fontSize: 16,
+  },
 });

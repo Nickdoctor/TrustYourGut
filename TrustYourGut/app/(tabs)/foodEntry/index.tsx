@@ -30,15 +30,16 @@ export default function FoodEntryScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.card}>
       <Stack.Screen options={{ title: "Food Entry" }} />
 
-      <Text style={styles.title}>Food Entry</Text>
+      <Text style={styles.title}>Food Entry ✏️</Text>
       <Text style={styles.subtitle}>
-        Track your meals, log details, and view your history.
+        Log your foods, view your history, and track trends over time.
       </Text>
-
+      </View>
       {/* Main Actions */}
-      <View style={styles.actions}>
+      <View style={[styles.card, styles.actions]}>
         <TouchableOpacity
           style={[styles.bigButton, styles.primary]}
           onPress={() => router.navigate("/foodEntry/individualFoodEntry")}
@@ -82,11 +83,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
-    marginTop: 20,
+    fontSize: 30,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 6,
   },
   subtitle: {
     fontSize: 16,
@@ -104,6 +105,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     width: "100%",
+  },
+  card: {
+    backgroundColor: '#2a2b32',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 650,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+    marginBottom: 20,
   },
   primary: {
     backgroundColor: "#4CAF50", // green
