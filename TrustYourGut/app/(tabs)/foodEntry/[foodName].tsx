@@ -27,12 +27,8 @@ export default function FoodHistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [avgScore, setAvgScore] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const onRefresh = () => {
-    setRefreshing(true);
-  };
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
 
       setLoading(true);
 
@@ -77,7 +73,14 @@ export default function FoodHistoryScreen() {
 
       setLoading(false);
     };
+    
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  };
 
+  useEffect(() => {
     fetchData();
   }, [foodName]);
 
